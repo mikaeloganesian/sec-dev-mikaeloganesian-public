@@ -1,7 +1,5 @@
 # SecDev Course Template
 
-Стартовый шаблон для студенческого репозитория (HSE SecDev 2025).
-
 ## Быстрый старт
 ```bash
 python -m venv .venv
