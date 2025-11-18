@@ -104,7 +104,7 @@ else
         fi
         echo "  Attempt $i/30: status = $STATUS"
     done
-    
+
     if [ "$HEALTHY" = true ]; then
         check "Container became healthy"
     else
@@ -113,7 +113,7 @@ else
         docker logs $CONTAINER_NAME 2>&1 | tail -20
         ERRORS=$((ERRORS + 1))
     fi
-    
+
     docker rm -f $CONTAINER_NAME >/dev/null 2>&1 || true
 fi
 echo ""
@@ -154,4 +154,3 @@ else
     echo -e "${RED}Found errors: $ERRORS${NC}"
     exit 1
 fi
-

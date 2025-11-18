@@ -17,9 +17,9 @@ check_endpoint() {
     local endpoint=$2
     local data=$3
     local description=$4
-    
+
     echo -n "Проверка: $description ... "
-    
+
     if [ "$method" = "GET" ]; then
         response=$(curl -s -w "\n%{http_code}" "$BASE_URL$endpoint")
     elif [ "$method" = "POST" ]; then
@@ -30,10 +30,10 @@ check_endpoint() {
     elif [ "$method" = "DELETE" ]; then
         response=$(curl -s -w "\n%{http_code}" -X DELETE "$BASE_URL$endpoint")
     fi
-    
+
     http_code=$(echo "$response" | tail -1)
     body=$(echo "$response" | sed '$d')
-    
+
     if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
         echo -e "${GREEN}✓${NC} (HTTP $http_code)"
         if [ -n "$body" ] && [ "$body" != "null" ]; then
@@ -67,4 +67,3 @@ echo ""
 echo "ReDoc documentation:"
 echo -e "${YELLOW}http://localhost:8000/redoc${NC}"
 echo "=========================================="
-
