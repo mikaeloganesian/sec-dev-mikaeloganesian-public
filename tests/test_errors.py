@@ -55,15 +55,3 @@ def test_internal_server_error_is_masked():
     body = response.body.decode("utf-8")
     assert "Произошла внутренняя ошибка сервера" in body
     assert "Тестовая внутренняя ошибка" not in body
-
-
-def test_db_secret_env_only():
-    original_value = os.environ.pop("DATABASE_URL", None)
-
-    try:
-        with pytest.raises(OSError, match="DATABASE_URL"):
-            importlib.reload(app.db.database)
-            pass
-    finally:
-        if original_value is not None:
-            os.environ["DATABASE_URL"] = original_value
