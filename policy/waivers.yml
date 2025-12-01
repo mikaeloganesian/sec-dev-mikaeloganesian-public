@@ -1,0 +1,6 @@
+version: 1
+
+defaults:
+  max_waiver_duration_days: 90
+
+waivers: []

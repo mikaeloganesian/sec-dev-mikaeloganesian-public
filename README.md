@@ -1,4 +1,6 @@
-# SecDev Course Template
+# Mikael Oganesian Repo
+
+[![CI](https://github.com/mikaeloganesian/sec-dev-mikaeloganesian-public/actions/workflows/ci.yml/badge.svg)](https://github.com/mikaeloganesian/sec-dev-mikaeloganesian-public/actions/workflows/ci.yml)
 
 ## Быстрый старт
 ```bash
