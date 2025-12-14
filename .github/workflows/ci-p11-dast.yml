@@ -60,12 +60,13 @@ jobs:
       - name: ZAP Baseline
         run: |
           mkdir -p EVIDENCE/P11
-          docker run --rm --network host -v $PWD:/zap/wrk owasp/zap2docker-stable \
+          docker run --rm --network host -v $PWD:/zap/wrk/:rw ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py \
               -t http://localhost:8000 \
               -r /zap/wrk/zap_baseline.html \
               -J /zap/wrk/zap_baseline.json \
-              -d || true
+              -d \
+              -I || true
           if [ -f zap_baseline.html ]; then
             mv zap_baseline.html EVIDENCE/P11/
             echo "HTML report created"
