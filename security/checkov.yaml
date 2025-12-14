@@ -1,0 +1,20 @@
+# Checkov configuration
+# Documentation: https://www.checkov.io/5.Policy%20Index/checkov.html
+
+quiet: false
+compact: true
+
+# Frameworks to check
+# Note: docker-compose files are checked via 'dockerfile' framework
+framework:
+  - kubernetes
+  - terraform
+  - dockerfile
+
+# Skip specific checks if needed
+# skip-check:
+#   - CKV_DOCKER_1   # Ensure that a user for the container has been created
+#   - CKV_K8S_9999  # Example K8s check
+
+# Soft fail - don't exit with error code
+soft-fail: false

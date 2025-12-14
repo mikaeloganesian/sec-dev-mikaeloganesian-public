@@ -1,3 +1,0 @@
-# SCA summary
-
-null

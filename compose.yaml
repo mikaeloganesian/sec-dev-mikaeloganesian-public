@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: sec-dev-app:latest
+    image: sec-dev-app:local
     ports:
       - "8000:8000"
     environment:

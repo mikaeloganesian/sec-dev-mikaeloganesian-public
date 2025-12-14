@@ -1,0 +1,13 @@
+# Hadolint configuration
+# Documentation: https://github.com/hadolint/hadolint#configure
+
+# Ignore specific rules if needed
+ignored:
+  # - DL3008   # Pin versions in apt get install
+  # - DL3018   # Pin versions in pip install
+
+# Override failure threshold (default: 0)
+failure-threshold: error
+
+# Output format
+format: json

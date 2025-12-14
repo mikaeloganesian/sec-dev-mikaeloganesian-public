@@ -1,0 +1,49 @@
+rules:
+  - id: python-unsafe-env-access
+    pattern: |
+      os.environ.get($KEY, $DEFAULT)
+    message: |
+      Использование os.environ.get() с дефолтным значением может скрыть отсутствие критических переменных окружения.
+      Рекомендуется использовать os.getenv() с явной проверкой или fail-fast подход.
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-209: Information Exposure Through an Error Message"
+      references:
+        - https://cwe.mitre.org/data/definitions/209.html
+
+  - id: python-sql-injection
+    pattern-either:
+      - pattern: |
+          $QUERY = $STR1 + $STR2 + ...
+      - pattern: |
+          $QUERY = f"...{$VAR}..."
+      - pattern: |
+          $QUERY = "...".format($VAR)
+    message: |
+      Потенциальная SQL-инъекция: использование строковой конкатенации для построения SQL-запросов.
+      Используйте параметризованные запросы SQLAlchemy.
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-89: Improper Neutralization of Special Elements used in an SQL Command"
+      references:
+        - https://cwe.mitre.org/data/definitions/89.html
+
+  - id: python-dangerous-eval
+    pattern-either:
+      - pattern: eval($X)
+      - pattern: exec($X)
+    message: |
+      Использование eval() или exec() может привести к выполнению произвольного кода.
+      Избегайте использования этих функций, особенно с пользовательским вводом.
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code"
+      references:
+        - https://cwe.mitre.org/data/definitions/95.html
+
