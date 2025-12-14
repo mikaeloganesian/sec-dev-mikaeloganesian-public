@@ -63,22 +63,27 @@ jobs:
           docker run --rm --network host -v $PWD:/zap/wrk/:rw ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py \
               -t http://localhost:8000 \
-              -r /zap/wrk/zap_baseline.html \
-              -J /zap/wrk/zap_baseline.json \
+              -r zap_baseline.html \
+              -J zap_baseline.json \
               -d \
-              -I || true
+              -I \
+              --autooff || true
+          echo "Checking for report files..."
+          ls -la *.html *.json 2>/dev/null || echo "No html/json files in current dir"
+          find . -name "*baseline*" -type f 2>/dev/null | head -10
           if [ -f zap_baseline.html ]; then
             mv zap_baseline.html EVIDENCE/P11/
-            echo "HTML report created"
+            echo "HTML report created and moved"
           else
-            echo "Warning: zap_baseline.html not found"
+            echo "Warning: zap_baseline.html not found in current directory"
           fi
           if [ -f zap_baseline.json ]; then
             mv zap_baseline.json EVIDENCE/P11/
-            echo "JSON report created"
+            echo "JSON report created and moved"
           else
-            echo "Warning: zap_baseline.json not found"
+            echo "Warning: zap_baseline.json not found in current directory"
           fi
+          echo "Files in EVIDENCE/P11/:"
           ls -la EVIDENCE/P11/
 
       - name: Upload P11 evidence
