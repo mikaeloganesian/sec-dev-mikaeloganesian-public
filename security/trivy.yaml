@@ -1,0 +1,20 @@
+# Trivy configuration
+# Documentation: https://aquasecurity.github.io/trivy/latest/docs/configuration/
+
+# Scanners to use
+scanners:
+  - vuln      # Vulnerability scanner
+  - config    # Misconfiguration scanner
+
+# Severity levels to report
+severity:
+  - CRITICAL
+  - HIGH
+  - MEDIUM
+  - LOW
+
+# Output format
+format: json
+
+# Exit code
+exit-code: 0  # Don't fail the build on vulnerabilities
