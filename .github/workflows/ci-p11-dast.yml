@@ -60,22 +60,47 @@ jobs:
       - name: ZAP Baseline
         run: |
           mkdir -p EVIDENCE/P11
-          docker run --rm --network host -v $PWD:/zap/wrk/:rw ghcr.io/zaproxy/zaproxy:stable \
-            zap-baseline.py \
-              -t http://localhost:8000 \
-              -r zap_baseline.html \
-              -J zap_baseline.json \
-              -d \
-              -I \
-              --autooff || true
-          if [ -f zap_baseline.html ]; then
+          ZAP_PORT=8080
+          docker run -d --name zap --network host \
+            -v $PWD:/zap/wrk/:rw \
+            ghcr.io/zaproxy/zaproxy:stable zap.sh -daemon -host 0.0.0.0 -port $ZAP_PORT \
+            -config api.disablekey=true \
+            -config api.addrs.addr.name=.* \
+            -config api.addrs.addr.regex=true
+          echo "Waiting for ZAP to start..."
+          for i in {1..60}; do
+            if curl -s http://localhost:$ZAP_PORT/JSON/core/view/version/ > /dev/null 2>&1; then
+              echo "ZAP is ready"
+              break
+            fi
+            sleep 2
+          done
+          echo "Spidering target..."
+          curl -s "http://localhost:$ZAP_PORT/JSON/spider/action/scan/?url=http://localhost:8000" > /dev/null
+          sleep 10
+          echo "Waiting for passive scan..."
+          sleep 10
+          echo "Generating HTML report..."
+          curl -s "http://localhost:$ZAP_PORT/OTHER/core/other/htmlreport/" -o zap_baseline.html || true
+          echo "Generating JSON report..."
+          curl -s "http://localhost:$ZAP_PORT/JSON/core/view/alerts/?baseurl=http://localhost:8000" -o zap_baseline.json || true
+          docker stop zap || true
+          docker rm zap || true
+          echo "Checking for report files..."
+          ls -lh zap_baseline.* 2>/dev/null || echo "No zap_baseline files in current dir"
+          if [ -f zap_baseline.html ] && [ -s zap_baseline.html ]; then
             mv zap_baseline.html EVIDENCE/P11/
-            echo "✓ HTML report created"
+            echo "✓ HTML report created ($(wc -c < EVIDENCE/P11/zap_baseline.html) bytes)"
+          else
+            echo "⚠ HTML report not found or empty"
           fi
-          if [ -f zap_baseline.json ]; then
+          if [ -f zap_baseline.json ] && [ -s zap_baseline.json ]; then
             mv zap_baseline.json EVIDENCE/P11/
-            echo "✓ JSON report created"
+            echo "✓ JSON report created ($(wc -c < EVIDENCE/P11/zap_baseline.json) bytes)"
+          else
+            echo "⚠ JSON report not found or empty"
           fi
+          echo "Files in EVIDENCE/P11/:"
           ls -la EVIDENCE/P11/
 
       - name: Upload P11 evidence
