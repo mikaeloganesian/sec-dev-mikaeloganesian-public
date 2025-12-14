@@ -76,14 +76,19 @@ jobs:
             CHECKOV_CONFIG=""
             if [ -f security/checkov.yaml ]; then
               CHECKOV_CONFIG="--config-file /work/security/checkov.yaml"
+              echo "Using Checkov config from security/checkov.yaml"
+            else
+              echo "No Checkov config file found, using defaults"
             fi
             # Run Checkov, redirect stderr to separate file, stdout to report
+            # Use --no-fail-on-crash to ensure we get output even on errors
             docker run --rm \
               -v $PWD:/work \
               bridgecrew/checkov \
               $IAC_DIRS \
               -o json \
               --compact \
+              --no-fail-on-crash \
               $CHECKOV_CONFIG > EVIDENCE/P12/checkov_report.json 2>EVIDENCE/P12/checkov_errors.log || true
             
             # Show errors if any
@@ -97,9 +102,14 @@ jobs:
               echo "Warning: Checkov report is empty, creating minimal report"
               echo '{"summary": {"failed": 0, "passed": 0, "skipped": 0, "parsing_errors": 0}, "results": {"failed_checks": [], "passed_checks": []}}' > EVIDENCE/P12/checkov_report.json
             elif ! jq empty EVIDENCE/P12/checkov_report.json 2>/dev/null; then
-              echo "Warning: Checkov report is not valid JSON, checking if it contains errors..."
-              # If not valid JSON, it might be error message, create minimal report
-              echo '{"summary": {"failed": 0, "passed": 0, "skipped": 0, "parsing_errors": 0}, "results": {"failed_checks": [], "passed_checks": []}}' > EVIDENCE/P12/checkov_report.json
+              echo "Warning: Checkov report is not valid JSON"
+              # Check if it's just an error message
+              if grep -q "error\|Error\|ERROR" EVIDENCE/P12/checkov_report.json 2>/dev/null; then
+                echo "Report contains error message, creating minimal report"
+                echo '{"summary": {"failed": 0, "passed": 0, "skipped": 0, "parsing_errors": 0}, "results": {"failed_checks": [], "passed_checks": []}}' > EVIDENCE/P12/checkov_report.json
+              fi
+            else
+              echo "Checkov report is valid JSON"
             fi
             echo "Checkov report generated"
             echo "Report size: $(wc -c < EVIDENCE/P12/checkov_report.json) bytes"

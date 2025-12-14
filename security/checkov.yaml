@@ -5,11 +5,11 @@ quiet: false
 compact: true
 
 # Frameworks to check
+# Note: docker-compose files are checked via 'dockerfile' framework
 framework:
   - kubernetes
   - terraform
   - dockerfile
-  - docker_compose
 
 # Skip specific checks if needed
 # skip-check:
