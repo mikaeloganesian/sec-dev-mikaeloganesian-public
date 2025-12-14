@@ -60,31 +60,50 @@ jobs:
       - name: ZAP Baseline
         run: |
           mkdir -p EVIDENCE/P11
+          pwd
+          ls -la
           docker run --rm --network host -v $PWD:/zap/wrk/:rw ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py \
               -t http://localhost:8000 \
-              -r zap_baseline.html \
-              -J zap_baseline.json \
+              -r /zap/wrk/zap_baseline.html \
+              -J /zap/wrk/zap_baseline.json \
               -d \
               -I \
               --autooff || true
-          echo "Checking for report files..."
-          ls -la *.html *.json 2>/dev/null || echo "No html/json files in current dir"
-          find . -name "*baseline*" -type f 2>/dev/null | head -10
+          echo "=== Checking for report files ==="
+          echo "Current directory: $(pwd)"
+          echo "Files in current dir:"
+          ls -la
+          echo "Files matching *baseline*:"
+          find . -name "*baseline*" -type f 2>/dev/null || echo "No baseline files found"
+          echo "All .html files:"
+          find . -name "*.html" -type f 2>/dev/null | head -5 || echo "No html files found"
+          echo "All .json files:"
+          find . -name "*.json" -type f 2>/dev/null | head -5 || echo "No json files found"
           if [ -f zap_baseline.html ]; then
             mv zap_baseline.html EVIDENCE/P11/
-            echo "HTML report created and moved"
+            echo "✓ HTML report moved to EVIDENCE/P11/"
+          elif [ -f /zap/wrk/zap_baseline.html ]; then
+            cp /zap/wrk/zap_baseline.html EVIDENCE/P11/
+            echo "✓ HTML report copied from /zap/wrk/"
           else
-            echo "Warning: zap_baseline.html not found in current directory"
+            echo "✗ Warning: zap_baseline.html not found"
           fi
           if [ -f zap_baseline.json ]; then
             mv zap_baseline.json EVIDENCE/P11/
-            echo "JSON report created and moved"
+            echo "✓ JSON report moved to EVIDENCE/P11/"
+          elif [ -f /zap/wrk/zap_baseline.json ]; then
+            cp /zap/wrk/zap_baseline.json EVIDENCE/P11/
+            echo "✓ JSON report copied from /zap/wrk/"
           else
-            echo "Warning: zap_baseline.json not found in current directory"
+            echo "✗ Warning: zap_baseline.json not found"
           fi
-          echo "Files in EVIDENCE/P11/:"
-          ls -la EVIDENCE/P11/
+          echo "=== Final check: Files in EVIDENCE/P11/ ==="
+          ls -la EVIDENCE/P11/ || echo "Directory is empty"
+          if [ ! -f EVIDENCE/P11/zap_baseline.html ] && [ ! -f EVIDENCE/P11/zap_baseline.json ]; then
+            echo "ERROR: No reports generated! Creating placeholder files..."
+            echo "ZAP scan completed but reports were not generated. Check ZAP logs above." > EVIDENCE/P11/ERROR.txt
+          fi
 
       - name: Upload P11 evidence
         if: always()
