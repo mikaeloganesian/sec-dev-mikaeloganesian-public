@@ -66,33 +66,56 @@ jobs:
             -v $PWD:/zap/wrk/:rw \
             ghcr.io/zaproxy/zaproxy:stable zap.sh -daemon -host 0.0.0.0 -port $ZAP_PORT
           echo "Waiting for ZAP to start..."
-          for i in {1..30}; do
+          ZAP_READY=false
+          for i in {1..60}; do
             if curl -s http://localhost:$ZAP_PORT/JSON/core/view/version/ > /dev/null 2>&1; then
-              echo "ZAP is ready"
+              echo "ZAP is ready (attempt $i)"
+              ZAP_READY=true
               break
             fi
-            sleep 1
+            if [ $((i % 5)) -eq 0 ]; then
+              echo "Waiting for ZAP... (attempt $i/60)"
+            fi
+            sleep 2
           done
+          if [ "$ZAP_READY" != "true" ]; then
+            echo "ERROR: ZAP failed to start"
+            docker logs zap || true
+            docker stop zap || true
+            docker rm zap || true
+            exit 1
+          fi
           echo "Spidering target..."
-          curl -s "http://localhost:$ZAP_PORT/JSON/spider/action/scan/?url=http://localhost:8000" > /dev/null
-          sleep 10
+          SCAN_ID=$(curl -s "http://localhost:$ZAP_PORT/JSON/spider/action/scan/?url=http://localhost:8000" | grep -o '"scan":"[^"]*"' | cut -d'"' -f4 || echo "")
+          echo "Spider scan ID: $SCAN_ID"
+          sleep 5
+          echo "Waiting for spider to complete..."
+          for i in {1..30}; do
+            STATUS=$(curl -s "http://localhost:$ZAP_PORT/JSON/spider/view/status/?scanId=$SCAN_ID" | grep -o '"[0-9]*"' | head -1 || echo "100")
+            if [ "$STATUS" = "100" ]; then
+              echo "Spider complete"
+              break
+            fi
+            echo "Spider progress: $STATUS% (attempt $i/30)"
+            sleep 2
+          done
           echo "Waiting for passive scan..."
-          sleep 10
+          sleep 15
           echo "Generating HTML report..."
-          curl -s "http://localhost:$ZAP_PORT/OTHER/core/other/htmlreport/" > zap_baseline.html || echo "Failed to get HTML report"
+          curl -s "http://localhost:$ZAP_PORT/OTHER/core/other/htmlreport/" -o zap_baseline.html 2>&1 || echo "Failed to get HTML report"
           echo "Generating JSON report..."
-          curl -s "http://localhost:$ZAP_PORT/JSON/core/view/alerts/?baseurl=http://localhost:8000" > zap_baseline.json || echo "Failed to get JSON report"
+          curl -s "http://localhost:$ZAP_PORT/JSON/core/view/alerts/?baseurl=http://localhost:8000" -o zap_baseline.json 2>&1 || echo "Failed to get JSON report"
           docker stop zap || true
           docker rm zap || true
           if [ -f zap_baseline.html ] && [ -s zap_baseline.html ]; then
             mv zap_baseline.html EVIDENCE/P11/
-            echo "✓ HTML report created"
+            echo "✓ HTML report created ($(wc -c < EVIDENCE/P11/zap_baseline.html) bytes)"
           else
             echo "✗ Warning: zap_baseline.html not found or empty"
           fi
           if [ -f zap_baseline.json ] && [ -s zap_baseline.json ]; then
             mv zap_baseline.json EVIDENCE/P11/
-            echo "✓ JSON report created"
+            echo "✓ JSON report created ($(wc -c < EVIDENCE/P11/zap_baseline.json) bytes)"
           else
             echo "✗ Warning: zap_baseline.json not found or empty"
           fi
