@@ -60,50 +60,43 @@ jobs:
       - name: ZAP Baseline
         run: |
           mkdir -p EVIDENCE/P11
-          pwd
-          ls -la
-          docker run --rm --network host -v $PWD:/zap/wrk/:rw ghcr.io/zaproxy/zaproxy:stable \
-            zap-baseline.py \
-              -t http://localhost:8000 \
-              -r /zap/wrk/zap_baseline.html \
-              -J /zap/wrk/zap_baseline.json \
-              -d \
-              -I \
-              --autooff || true
-          echo "=== Checking for report files ==="
-          echo "Current directory: $(pwd)"
-          echo "Files in current dir:"
-          ls -la
-          echo "Files matching *baseline*:"
-          find . -name "*baseline*" -type f 2>/dev/null || echo "No baseline files found"
-          echo "All .html files:"
-          find . -name "*.html" -type f 2>/dev/null | head -5 || echo "No html files found"
-          echo "All .json files:"
-          find . -name "*.json" -type f 2>/dev/null | head -5 || echo "No json files found"
-          if [ -f zap_baseline.html ]; then
+          chmod 777 $PWD EVIDENCE/P11 || true
+          ZAP_PORT=8080
+          docker run -d --name zap --network host \
+            -v $PWD:/zap/wrk/:rw \
+            ghcr.io/zaproxy/zaproxy:stable zap.sh -daemon -host 0.0.0.0 -port $ZAP_PORT
+          echo "Waiting for ZAP to start..."
+          for i in {1..30}; do
+            if curl -s http://localhost:$ZAP_PORT/JSON/core/view/version/ > /dev/null 2>&1; then
+              echo "ZAP is ready"
+              break
+            fi
+            sleep 1
+          done
+          echo "Spidering target..."
+          curl -s "http://localhost:$ZAP_PORT/JSON/spider/action/scan/?url=http://localhost:8000" > /dev/null
+          sleep 10
+          echo "Waiting for passive scan..."
+          sleep 10
+          echo "Generating HTML report..."
+          curl -s "http://localhost:$ZAP_PORT/OTHER/core/other/htmlreport/" > zap_baseline.html || echo "Failed to get HTML report"
+          echo "Generating JSON report..."
+          curl -s "http://localhost:$ZAP_PORT/JSON/core/view/alerts/?baseurl=http://localhost:8000" > zap_baseline.json || echo "Failed to get JSON report"
+          docker stop zap || true
+          docker rm zap || true
+          if [ -f zap_baseline.html ] && [ -s zap_baseline.html ]; then
             mv zap_baseline.html EVIDENCE/P11/
-            echo "✓ HTML report moved to EVIDENCE/P11/"
-          elif [ -f /zap/wrk/zap_baseline.html ]; then
-            cp /zap/wrk/zap_baseline.html EVIDENCE/P11/
-            echo "✓ HTML report copied from /zap/wrk/"
+            echo "✓ HTML report created"
           else
-            echo "✗ Warning: zap_baseline.html not found"
+            echo "✗ Warning: zap_baseline.html not found or empty"
           fi
-          if [ -f zap_baseline.json ]; then
+          if [ -f zap_baseline.json ] && [ -s zap_baseline.json ]; then
             mv zap_baseline.json EVIDENCE/P11/
-            echo "✓ JSON report moved to EVIDENCE/P11/"
-          elif [ -f /zap/wrk/zap_baseline.json ]; then
-            cp /zap/wrk/zap_baseline.json EVIDENCE/P11/
-            echo "✓ JSON report copied from /zap/wrk/"
+            echo "✓ JSON report created"
           else
-            echo "✗ Warning: zap_baseline.json not found"
+            echo "✗ Warning: zap_baseline.json not found or empty"
           fi
-          echo "=== Final check: Files in EVIDENCE/P11/ ==="
-          ls -la EVIDENCE/P11/ || echo "Directory is empty"
-          if [ ! -f EVIDENCE/P11/zap_baseline.html ] && [ ! -f EVIDENCE/P11/zap_baseline.json ]; then
-            echo "ERROR: No reports generated! Creating placeholder files..."
-            echo "ZAP scan completed but reports were not generated. Check ZAP logs above." > EVIDENCE/P11/ERROR.txt
-          fi
+          ls -la EVIDENCE/P11/
 
       - name: Upload P11 evidence
         if: always()
