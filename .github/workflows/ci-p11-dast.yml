@@ -54,16 +54,31 @@ jobs:
         run: |
           uvicorn app.main:app --host 0.0.0.0 --port 8000 &
           timeout 30 bash -c 'until curl -sf http://localhost:8000/health; do sleep 1; done'
+          sleep 2
+          curl -f http://localhost:8000/health || exit 1
 
       - name: ZAP Baseline
         run: |
+          mkdir -p EVIDENCE/P11
           docker run --rm --network host -v $PWD:/zap/wrk owasp/zap2docker-stable \
             zap-baseline.py \
               -t http://localhost:8000 \
-              -r zap_baseline.html \
-              -J zap_baseline.json \
+              -r /zap/wrk/zap_baseline.html \
+              -J /zap/wrk/zap_baseline.json \
               -d || true
-          mv zap_baseline.* EVIDENCE/P11/ || true
+          if [ -f zap_baseline.html ]; then
+            mv zap_baseline.html EVIDENCE/P11/
+            echo "HTML report created"
+          else
+            echo "Warning: zap_baseline.html not found"
+          fi
+          if [ -f zap_baseline.json ]; then
+            mv zap_baseline.json EVIDENCE/P11/
+            echo "JSON report created"
+          else
+            echo "Warning: zap_baseline.json not found"
+          fi
+          ls -la EVIDENCE/P11/
 
       - name: Upload P11 evidence
         if: always()
